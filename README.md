@@ -1,0 +1,2 @@
+# hello
+Practice Go Project
