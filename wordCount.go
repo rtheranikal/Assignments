@@ -17,12 +17,15 @@ import (
 	"runtime"
 	"sync"
 	"bufio"
+	"io"
+	"strings"
 )
 
 func main() {
 
 	args := os.Args
 
+// read the file name and the search string from the command line
 	file := args[1]
 	text := args[2]
 
@@ -32,8 +35,8 @@ func main() {
 
 // channel d to see if the thread has finished working
 // channel c to send the lines one by one to the threads
-	d = make(chan string)
-	c = make(chan string)
+	d := make(chan string)
+	c := make(chan string)
 
 // count variable to keep track of lines with occurrence of string
 	var count = 0
@@ -53,7 +56,7 @@ func main() {
 	bf := bufio.NewReader(inputFile)
 
 	for {
-		line, isPrefix, err := bf.ReadLine()
+		line, err := bf.ReadString('\n')
 		if err == io.EOF {
 			close(c)
 			break
@@ -61,10 +64,6 @@ func main() {
 		if err != nil {
 			log.Fatal("Error reading line:", err)
 		}
-		if isPrefix {
-			log.Fatal("Error: Unexpected long line reading", inputFile.Name())
-		}
-
 		c <- line
 	}
 
@@ -73,7 +72,7 @@ func main() {
 			for {
 // read from the channel that feeds in lines from the main thread 
 				mutex.Lock()
-				line, ok <- c
+				line, ok := <-c
 				mutex.Unlock()
 
 // check if the channel is empty, if so ... output "Done"
@@ -81,7 +80,7 @@ func main() {
 					d <- "Done"
 				} else {
 // process the string to check if it contains a valid string
-					if Contains(line, text) {
+					if strings.Contains(line, text) {
 						mutex.Lock()
 						count++
 						mutex.Unlock()
@@ -90,12 +89,11 @@ func main() {
 			}
 
 		} ()
-
 	}
 
 // check if every process has finished
 	for i := 0; i < num_threads; i++ {
-		msg <- d
+		msg := <-d
 		if msg != "Done" {
 			log.Fatal("Error: Incorrect message read", msg)
 		}
