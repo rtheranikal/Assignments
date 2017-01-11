@@ -53,19 +53,6 @@ func main() {
 // close the file when we leave the scope of this function
 	defer inputFile.Close()
 
-	bf := bufio.NewReader(inputFile)
-
-	for {
-		line, err := bf.ReadString('\n')
-		if err == io.EOF {
-			close(c)
-			break
-		}
-		if err != nil {
-			log.Fatal("Error reading line:", err)
-		}
-		c <- line
-	}
 
 	for i := 0; i < num_threads; i++ {
 		go func() {
@@ -73,7 +60,10 @@ func main() {
 // read from the channel that feeds in lines from the main thread 
 				mutex.Lock()
 				line, ok := <-c
-				mutex.Unlock()
+				mutex.Unlock
+
+				fmt.Printf("Thread %d\n", i)
+
 
 // check if the channel is empty, if so ... output "Done"
 				if !ok {
@@ -90,6 +80,26 @@ func main() {
 
 		} ()
 	}
+
+// read in the lines of the file one by one
+	bf := bufio.NewReader(inputFile)
+	for {
+		line, err := bf.ReadString('\n')
+
+// check if the end of the file has been reached and then break the feeding channel
+		if err == io.EOF {
+			close(c)
+			break
+		}
+		if err != nil {
+			log.Fatal("Error reading line:", err)
+		}
+
+// feed in the actual line string into the channel
+		c <- line
+	}
+
+
 
 // check if every process has finished
 	for i := 0; i < num_threads; i++ {
